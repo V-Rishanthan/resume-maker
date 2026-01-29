@@ -2,14 +2,12 @@ import React, { useContext, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResumeInfoContext } from "@/context/ResumeInfoContext";
-import { Rating } from "@smastrom/react-rating";
-import "@smastrom/react-rating/style.css";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFirestore } from "@/hooks/Firestore";
 import { useParams } from "react-router-dom";
 
-const emptySkill = { name: "", rating: 0 };
+const emptySkill = { name: "" };
 
 const Skills = ({ enableNext }) => {
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
@@ -54,7 +52,7 @@ const Skills = ({ enableNext }) => {
       const cleaned = skillsList
         .map((s) => ({
           name: (s.name || "").trim(),
-          rating: Number(s.rating || 0),
+
         }))
         .filter((s) => s.name.length > 0);
 
@@ -95,14 +93,6 @@ const Skills = ({ enableNext }) => {
                 placeholder="e.g., React, Firebase, UI/UX"
               />
             </div>
-
-            <div className="pt-5">
-              <Rating
-                style={{ maxWidth: 120 }}
-                value={item.rating}
-                onChange={(v) => handleChange(index, "rating", v)}
-              />
-            </div>
           </div>
         ))}
       </div>
@@ -138,3 +128,5 @@ const Skills = ({ enableNext }) => {
 };
 
 export default Skills;
+
+
