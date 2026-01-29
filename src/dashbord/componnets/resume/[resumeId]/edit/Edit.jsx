@@ -22,7 +22,7 @@ const Edit = () => {
 
     if (docSnap.exists()) {
       console.log("Document data:", docSnap.data());
-      setResumeInfo(docSnap.data());
+      setResumeInfo({ ...Dummy, ...docSnap.data() });
     } else {
       // doc.data() will be undefined in this case
       console.log("No such document!");

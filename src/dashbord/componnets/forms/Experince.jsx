@@ -3,6 +3,10 @@ import { Input } from "@/components/ui/input";
 import React, { useContext, useEffect, useState } from "react";
 import RichTextEditor from "../RichTextEditor";
 import { ResumeInfoContext } from "@/context/ResumeInfoContext";
+import { useFirestore } from "@/hooks/Firestore";
+import { useParams } from "react-router-dom";
+import { Loader2 } from 'lucide-react'
+import { toast } from "sonner";
 // http://localhost:5173/dashboard/resume/1234/edit
 const formField = {
   title: "",
@@ -11,41 +15,75 @@ const formField = {
   state: "",
   startDate: "",
   endDate: "",
-  workSUmmery: "",
+  workSummery: "",
 };
 
-const Experince = () => {
+const Experince = ({ enableNext }) => {
   const [experienceList, setExperienceList] = useState([formField]);
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
+  const [loading, setLoading] = useState(false);
+  const { resumeId } = useParams();
+
+  const { updateDocument } = useFirestore("UserResumes")
+
+  useEffect(() => {
+    if (resumeInfo?.experience?.length > 0) {
+      setExperienceList(resumeInfo.experience);
+    }
+  }, []);
 
   const handleChange = (event, index) => {
     const newEntries = experienceList.slice();
     const { name, value } = event.target;
-    newEntries[index][name] = value;
+    newEntries[index] = {
+      ...newEntries[index],
+      [name]: value
+    };
     setExperienceList(newEntries);
   };
 
   const AddNewExperince = () => {
-    setExperienceList([...experienceList, formField]);
+    setExperienceList([...experienceList, { ...formField }]);
   };
+
   const RemoveExperince = () => {
     setExperienceList((experienceList) => experienceList.slice(0, -1));
   };
 
   const handleRichEditor = (e, name, index) => {
     const newEntries = experienceList.slice();
-    newEntries[index][name] = e.target.value;
+    newEntries[index] = {
+      ...newEntries[index],
+      [name]: e.target.value
+    };
     setExperienceList(newEntries);
   };
 
   useEffect(() => {
-    // console.log(experienceList);
-
     setResumeInfo({
       ...resumeInfo,
       experience: experienceList,
     });
   }, [experienceList]);
+
+
+  const onSave = async (e) => {
+    e.preventDefault()
+    setLoading(true);
+    try {
+      await updateDocument(resumeId, { experience: experienceList })
+      enableNext(true)
+      toast.success("Experience saved successfully", {
+        description: "Your Experience has been saved successfully"
+      })
+    } catch (error) {
+      console.log(error)
+      toast.error("Experience saved failed")
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="p-5 shadow-lg border-t-primary border-t-4 mt-10">
       <h2 className="font-bold text-lg">Professional Experience</h2>
@@ -60,6 +98,7 @@ const Experince = () => {
                 </label>
                 <Input
                   name="title"
+                  value={item?.title}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -69,7 +108,8 @@ const Experince = () => {
                   CompanyName
                 </label>
                 <Input
-                  name="CompanyName"
+                  name="companyName"
+                  value={item?.companyName}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -80,6 +120,7 @@ const Experince = () => {
                 </label>
                 <Input
                   name="city"
+                  value={item?.city}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -90,6 +131,7 @@ const Experince = () => {
                 </label>
                 <Input
                   name="state"
+                  value={item?.state}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -101,6 +143,7 @@ const Experince = () => {
                 <Input
                   type="date"
                   name="startDate"
+                  value={item?.startDate}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -112,6 +155,7 @@ const Experince = () => {
                 <Input
                   type="date"
                   name="endDate"
+                  value={item?.endDate}
                   onChange={(event) => handleChange(event, index)}
                 />
               </div>
@@ -120,6 +164,7 @@ const Experince = () => {
               <div className="col-span-2 text-justify">
                 <RichTextEditor
                   index={index}
+                  defaultValue={item?.workSummery}
                   onRishTextEditorChanges={(event) =>
                     handleRichEditor(event, "workSummery", index)
                   }
@@ -147,7 +192,15 @@ const Experince = () => {
           </Button>
         </div>
 
-        <Button>Save</Button>
+        <Button disabled={loading} onClick={onSave}>
+          {
+            loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              "Save"
+            )
+          }
+        </Button>
       </div>
     </div>
   );

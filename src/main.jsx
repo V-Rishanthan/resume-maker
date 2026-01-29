@@ -24,7 +24,7 @@ const router = createBrowserRouter([
         element: <Dashboard />, // Fixed typo
       },
       {
-        path: "dashboard/resume/:resumeid/edit",
+        path: "dashboard/resume/:resumeId/edit",
         element: <Edit />,
       },
     ],

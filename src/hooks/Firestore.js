@@ -1,37 +1,37 @@
 
 import { db } from "@/firebase/confic"
-import { addDoc, collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore"
+import { addDoc, collection, getDocs, query, where, updateDoc, doc, deleteDoc } from "firebase/firestore"
 
 export const useFirestore = (fbCollections) => {
 
-    const collectionRef = collection(db, fbCollections)
-
-    // //  CREATE
-
     const createDocument = async (data) => {
         try {
+            const collectionRef = collection(db, fbCollections)
             const docRef = await addDoc(collectionRef, data);
             console.log("Document successfully written!", docRef.id);
+            return docRef.id;
         } catch (error) {
             console.error("Error writing document: ", error);
+            throw error;
         }
     }
-
-    // //  READ
 
     const getDocument = async () => {
         try {
+            const collectionRef = collection(db, fbCollections)
             const q = query(collectionRef);
             const querySnapshot = await getDocs(q);
+            const docs = [];
             querySnapshot.forEach((doc) => {
                 console.log(doc.id, " => ", doc.data());
+                docs.push({ id: doc.id, ...doc.data() });
             });
+            return docs;
         } catch (error) {
             console.error("Error reading document: ", error);
+            throw error;
         }
     }
-
-    // //  UPDATE
 
     const updateDocument = async (id, data) => {
         try {
@@ -40,10 +40,9 @@ export const useFirestore = (fbCollections) => {
             console.log("Document successfully updated!");
         } catch (error) {
             console.error("Error updating document: ", error);
+            throw error;
         }
     }
-
-    // //  DELETE
 
     const deleteDocument = async (id) => {
         try {
@@ -52,6 +51,7 @@ export const useFirestore = (fbCollections) => {
             console.log("Document successfully deleted!");
         } catch (error) {
             console.error("Error deleting document: ", error);
+            throw error;
         }
     }
 
@@ -61,6 +61,4 @@ export const useFirestore = (fbCollections) => {
         updateDocument,
         deleteDocument
     }
-
 }
-

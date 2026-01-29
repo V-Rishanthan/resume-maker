@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ResumeInfoContext } from "@/context/ResumeInfoContext";
 import { Brain, LoaderCircle } from "lucide-react";
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import Editor, {
   BtnBold,
   BtnBulletList,
@@ -24,10 +24,16 @@ Return a JSON object with:
 - positionTitle: string
 - bulletPoints: array of strings (each string is a bullet point)`;
 
-const RichTextEditor = ({ onRishTextEditorChanges, index }) => {
-  const [value, setValue] = useState("simple text");
+const RichTextEditor = ({ onRishTextEditorChanges, index, defaultValue }) => {
+  const [value, setValue] = useState(defaultValue || "");
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (defaultValue && !value) {
+      setValue(defaultValue)
+    }
+  }, [defaultValue])
 
   const generateSummaryFromAI = async () => {
     setLoading(true);

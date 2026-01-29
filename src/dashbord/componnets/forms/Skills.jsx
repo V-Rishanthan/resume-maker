@@ -1,80 +1,137 @@
-import { Input } from "@/components/ui/input";
 import React, { useContext, useEffect, useState } from "react";
-import { Rating } from "@smastrom/react-rating";
-
-import "@smastrom/react-rating/style.css";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResumeInfoContext } from "@/context/ResumeInfoContext";
+import { Rating } from "@smastrom/react-rating";
+import "@smastrom/react-rating/style.css";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useFirestore } from "@/hooks/Firestore";
+import { useParams } from "react-router-dom";
 
-const Skills = () => {
-  const [skillsList, setSkillsList] = useState([{ name: "", rating: 0 }]);
+const emptySkill = { name: "", rating: 0 };
+
+const Skills = ({ enableNext }) => {
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
 
-  const handleChange = (index, name, value) => {
-    const newEntries = skillsList.slice();
+  const [skillsList, setSkillsList] = useState([{ ...emptySkill }]);
+  const [loading, setLoading] = useState(false);
 
-    newEntries[index][name] = value;
-    setSkillsList(newEntries);
-  };
+  const { resumeId } = useParams();
+  const { updateDocument } = useFirestore("UserResumes");
 
-  const AddNewSkills = () => {
-    setSkillsList([...skillsList, { name: "", rating: 0 }]);
-  };
-  const RemoveSkills = () => {
-    setSkillsList((skillsList) => skillsList.slice(0, -1));
-  };
-
-  useEffect(() => {
-    setResumeInfo({
-      ...resumeInfo,
-      skills: skillsList,
+  const handleChange = (index, field, value) => {
+    setSkillsList((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
     });
+  };
+
+  const addNewSkills = () => {
+    setSkillsList((prev) => [...prev, { ...emptySkill }]);
+  };
+
+  const removeSkills = () => {
+    setSkillsList((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  };
+
+  // Keep context in sync (optional)
+  useEffect(() => {
+    setResumeInfo({ ...resumeInfo, skills: skillsList });
+
   }, [skillsList]);
+
+  const onSave = async () => {
+    setLoading(true);
+    try {
+      if (!resumeId) {
+        toast.error("Missing resumeId in URL");
+        return;
+      }
+
+      // Optional: basic validation
+      const cleaned = skillsList
+        .map((s) => ({
+          name: (s.name || "").trim(),
+          rating: Number(s.rating || 0),
+        }))
+        .filter((s) => s.name.length > 0);
+
+      await updateDocument(resumeId, { skills: cleaned });
+
+      if (typeof enableNext === "function") enableNext(true);
+
+      toast.success("Skills saved successfully", {
+        description: "Your skills have been saved successfully.",
+      });
+    } catch (error) {
+      console.log("Save skills error:", error?.message, error);
+      toast.error("Skills save failed", {
+        description: error?.message || "Check console for details",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-5 shadow-lg border-t-primary border-t-4 mt-10">
       <h2 className="font-bold text-lg">Skills</h2>
-      <p>Add your top skills </p>
+      <p>Add your top skills</p>
 
-      <div>
-        {skillsList?.map((item, index) => (
-          <div className="flex justify-between border rounded-lg p-3 mb-2">
-            <div>
-              <label htmlFor="#" className="text-xs">
-                Name
-              </label>
+      <div className="mt-4">
+        {skillsList.map((item, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between gap-4 border rounded-lg p-3 mb-2"
+          >
+            <div className="flex-1">
+              <label className="text-xs">Name</label>
               <Input
-                className="w-full "
+                className="w-full"
+                value={item.name}
                 onChange={(e) => handleChange(index, "name", e.target.value)}
+                placeholder="e.g., React, Firebase, UI/UX"
               />
             </div>
-            <Rating
-              style={{ maxWidth: 120 }}
-              value={item.rating}
-              onChange={(v) => handleChange(index, "rating", v)}
-            />
+
+            <div className="pt-5">
+              <Rating
+                style={{ maxWidth: 120 }}
+                value={item.rating}
+                onChange={(v) => handleChange(index, "rating", v)}
+              />
+            </div>
           </div>
         ))}
       </div>
-      <div className="flex justify-between">
+
+      <div className="flex justify-between items-center mt-3">
         <div className="flex gap-2">
           <Button
+            type="button"
             variant="outline"
-            onClick={AddNewSkills}
+            onClick={addNewSkills}
             className="text-primary"
           >
             + Add More Skill
           </Button>
+
           <Button
+            type="button"
             variant="outline"
-            onClick={RemoveSkills}
+            onClick={removeSkills}
             className="text-primary"
+            disabled={skillsList.length <= 1}
           >
             - Remove Skill
           </Button>
         </div>
 
-        <Button>Save</Button>
+        <Button type="button" onClick={onSave} disabled={loading}>
+          {loading ? <Loader2 className="animate-spin" /> : "Save"}
+        </Button>
       </div>
     </div>
   );

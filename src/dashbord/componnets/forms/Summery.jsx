@@ -4,17 +4,28 @@ import { ResumeInfoContext } from "@/context/ResumeInfoContext";
 import { Brain, LoaderCircle } from "lucide-react";
 import React, { useContext, useEffect, useState } from "react";
 import { generateResumeContent } from "../../../../service/AIModel";
+import { useFirestore } from "@/hooks/Firestore";
+import { useParams } from "react-router-dom";
+import { Loader2 } from 'lucide-react'
+import { toast } from "sonner";
 
-const Summery = () => {
+const Summery = ({ enableNext }) => {
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
-  const [summary, setSummary] = useState("");
+  const [summary, setSummary] = useState(resumeInfo?.summery || "");
   const [aiGeneratedSummaryList, setAiGeneratedSummaryList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { resumeId } = useParams();
+
+  const { updateDocument } = useFirestore("UserResumes");
 
   useEffect(() => {
-    if (summary) {
-      setResumeInfo({ ...resumeInfo, summery: summary });
+    if (resumeInfo?.summery && !summary) {
+      setSummary(resumeInfo.summery);
     }
+  }, [resumeInfo]);
+
+  useEffect(() => {
+    summary && setResumeInfo({ ...resumeInfo, summery: summary });
   }, [summary]);
 
   const generateSummary = async () => {
@@ -23,51 +34,87 @@ const Summery = () => {
       return;
     }
     setLoading(true);
+    console.log("Generating summary for:", resumeInfo.jobTitle);
     const prompt = `job Title: ${resumeInfo.jobTitle}, 
     Generate 3 resume summaries for different experience levels (Fresher, Mid-Level, Experienced) in JSON format. 
     Return an object with a 'resumeSummaries' array where each item has:
     - experienceLevel: string (one of "Fresher", "Mid-Level", "Experienced")
     - summary: string (4-5 line summary for this experience level)`;
 
+    console.log("Prompt sent to AI:", prompt);
+
+    const toastId = toast.loading("Generating AI summaries...");
     try {
       const result = await generateResumeContent(prompt);
       console.log("AI Response:", result);
 
       if (result) {
+
+
+        if (result.startsWith("Error:")) {
+          setAiErrorMessage(
+            "AI summary is temporarily unavailable. Please enter your summary manually. Sorry for the inconvenience."
+          );
+          toast.error("AI Summary is currently unavailable", { id: toastId });
+          setLoading(false);
+          return;
+        }
+
+
+        let parsedResult;
         try {
-          const parsedResult = JSON.parse(result);
-          // Check if the response has the expected structure
-          if (
-            parsedResult.resumeSummaries &&
-            Array.isArray(parsedResult.resumeSummaries)
-          ) {
-            setAiGeneratedSummaryList(parsedResult.resumeSummaries);
-          } else {
-            console.error("Unexpected response structure:", parsedResult);
-            setAiGeneratedSummaryList([]);
-          }
+          // Try to clean the result if it contains markdown code blocks
+          const cleanedResult = result.replace(/```json|```/g, "").trim();
+          parsedResult = JSON.parse(cleanedResult);
         } catch (parseError) {
-          console.error("Error parsing JSON: ", parseError);
-          setAiGeneratedSummaryList([]);
+          console.log("Failed to parse JSON, treating as plain text fallback");
+          // If JSON parsing fails, create a single suggestion from the raw text
+          parsedResult = {
+            resumeSummaries: [
+              {
+                experienceLevel: "Suggested",
+                summary: result
+              }
+            ]
+          };
+        }
+
+        if (parsedResult.resumeSummaries && Array.isArray(parsedResult.resumeSummaries)) {
+          setAiGeneratedSummaryList(parsedResult.resumeSummaries);
+          toast.success("Suggestions generated!", { id: toastId });
+        } else {
+          toast.error("Failed to generate summaries. Try again.", { id: toastId });
         }
       } else {
-        setAiGeneratedSummaryList([]);
+        toast.error("No response from AI. Check your API key or model availability.", { id: toastId });
       }
     } catch (error) {
       console.error("Failed to generate summary:", error);
-      setAiGeneratedSummaryList([]);
+      toast.error("An error occurred. Check console.", { id: toastId });
     } finally {
       setLoading(false);
     }
   };
 
-  const onSave = (e) => {
+  const onSave = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    try {
+      await updateDocument(resumeId, { summery: summary });
+      enableNext(true);
+      toast.success("Summary updated!", {
+        description: "Your professional summary has been saved successfully."
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to save summary");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUseSummary = (summaryText) => {
     setSummary(summaryText);
-    setResumeInfo({ ...resumeInfo, summery: summaryText });
   };
 
   return (
@@ -80,6 +127,7 @@ const Summery = () => {
           <div className="flex justify-between items-end">
             <label htmlFor="#">Add Summary</label>
             <Button
+              type="button"
               variant="outline"
               onClick={generateSummary}
               className="border-primary text-primary cursor-pointer"

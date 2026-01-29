@@ -1,43 +1,28 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-async function generateResumeContent(prompt) {
+const apiKey = import.meta.env.VITE_GOOGLE_AI_API_KEY;
+
+if (!apiKey) throw new Error("Missing VITE_GOOGLE_AI_API_KEY in .env file");
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+export const generateResumeContent = async (prompt) => {
   try {
-    const ai = new GoogleGenAI({
-      apiKey: import.meta.env.VITE_GOOGLE_AI_API_KEY,
-    });
-
-    const config = {
-      responseMimeType: "application/json",
-    };
-
-    const model = "gemini-1.5-flash";
-    const contents = [
-      {
-        role: "user",
-        parts: [
-          {
-            text: prompt,
-          },
-        ],
+    const model = genAI.getGenerativeModel({
+      // Use a currently supported model from the Gemini models list
+      model: "gemini-2.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.7,
       },
-    ];
-
-    const response = await ai.models.generateContentStream({
-      model,
-      config,
-      contents,
     });
 
-    let fullResponse = "";
-    for await (const chunk of response) {
-      fullResponse += chunk.text;
-    }
+    const result = await model.generateContent(prompt);
 
-    return fullResponse || ""; // Ensure we return a string
+    // SDK returns text; with responseMimeType it's JSON text
+    return result.response.text();
   } catch (error) {
-    console.error("Error generating summary:", error);
-    return ""; // Return an empty string
+    console.error("AI Generation Error:", error);
+    return `Error: ${error?.message || "Unknown error"}`;
   }
-}
-
-export { generateResumeContent };
+};

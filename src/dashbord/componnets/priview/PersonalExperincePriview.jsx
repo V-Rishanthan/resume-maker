@@ -13,7 +13,7 @@ const PersonalExperincePriview = ({ resumeInfo }) => {
       </h2>
       <hr style={{ borderColor: resumeInfo?.themeColor }} />
 
-      {resumeInfo?.experience.map((experinec, index) => (
+      {resumeInfo?.experience?.map((experinec, index) => (
         <div key={index} className="my-5">
           <h2
             className="text-sm font-bold "

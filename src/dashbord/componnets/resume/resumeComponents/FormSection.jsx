@@ -52,7 +52,9 @@ const FormSection = () => {
         <PersonalDetails enableNext={(v) => setEnableNext(v)} />
       ) : null}
       {/* Summery */}
-      {activeFormIndex == 2 ? <Summery /> : null}
+      {activeFormIndex == 2 ? (
+        <Summery enableNext={(v) => setEnableNext(v)} />
+      ) : null}
 
       {/* Experience */}
       {activeFormIndex == 3 ? <Experince /> : null}

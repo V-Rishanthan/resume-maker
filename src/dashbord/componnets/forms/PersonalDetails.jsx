@@ -4,15 +4,16 @@ import { ResumeInfoContext } from "@/context/ResumeInfoContext";
 import { Loader2 } from "lucide-react";
 import React, { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase/confic";
+
 import { toast } from "sonner";
+import { useFirestore } from "@/hooks/Firestore";
 
 const PersonalDetails = ({ enableNext }) => {
   const params = useParams();
   const { resumeInfo, setResumeInfo } = useContext(ResumeInfoContext);
+  const { updateDocument } = useFirestore("UserResumes");
 
-  const [formData, setFormData] = useState();
+  const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,10 +24,10 @@ const PersonalDetails = ({ enableNext }) => {
     enableNext(false);
     const { name, value } = e.target;
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
     setResumeInfo({
       ...resumeInfo,
       [name]: value,
@@ -36,21 +37,27 @@ const PersonalDetails = ({ enableNext }) => {
   const onSave = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const data = {
-      data: formData,
-    };
-    try {
-      const docRef = doc(db, "UserResumes", params?.resumeId);
-      await updateDoc(docRef, {
-        ...formData,
-      }); // Update specific fields
 
-      console.log("Document successfully written!");
-      enableNext(true);
+    const { firstName, lastName, jobTitle, address, phone, email } = resumeInfo || {};
+
+    if (!firstName || !lastName || !jobTitle || !address || !phone || !email) {
+      toast.warning("Incomplete Details", {
+        description: "Please fill in all required fields before saving.",
+      });
+
       setLoading(false);
-      toast("Personal Details updated!")
+      return;
+    }
+
+    try {
+      await updateDocument(params?.resumeId, formData);
+      enableNext(true);
+      toast.success("Personal Details updated!", {
+        description: "Personal Details updated successfully!"
+      });
     } catch (error) {
-      console.error("Error updating document: ", error);
+      console.log(error.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -64,32 +71,32 @@ const PersonalDetails = ({ enableNext }) => {
         <div className="grid grid-cols-2 mt-5 gap-3">
           <div>
             <label className="text-sm font-medium">First Name</label>
-            <Input name="firstName" defaultValue={resumeInfo?.firstName} required onChange={handleInputChange} />
+            <Input name="firstName" defaultValue={resumeInfo?.firstName} onChange={handleInputChange} />
           </div>
 
           <div>
             <label className="text-sm font-medium">Last Name</label>
-            <Input name="lastName" defaultValue={resumeInfo?.lastName} required onChange={handleInputChange} />
+            <Input name="lastName" defaultValue={resumeInfo?.lastName} onChange={handleInputChange} />
           </div>
 
           <div className="col-span-2">
             <label className="text-sm font-medium">Job Title</label>
-            <Input name="jobTitle" defaultValue={resumeInfo?.jobTitle} required onChange={handleInputChange} />
+            <Input name="jobTitle" defaultValue={resumeInfo?.jobTitle} onChange={handleInputChange} />
           </div>
 
           <div className="col-span-2">
             <label className="text-sm font-medium">Address</label>
-            <Input name="address" defaultValue={resumeInfo?.address} required onChange={handleInputChange} />
+            <Input name="address" defaultValue={resumeInfo?.address} onChange={handleInputChange} />
           </div>
 
           <div className="col-span-2">
             <label className="text-sm font-medium">Phone</label>
-            <Input name="phone" defaultValue={resumeInfo?.phone} required onChange={handleInputChange} />
+            <Input name="phone" defaultValue={resumeInfo?.phone} onChange={handleInputChange} />
           </div>
 
           <div className="col-span-2">
             <label className="text-sm font-medium">Email</label>
-            <Input name="email" defaultValue={resumeInfo?.email} required onChange={handleInputChange} />
+            <Input name="email" defaultValue={resumeInfo?.email} onChange={handleInputChange} />
           </div>
         </div>
         <div className="mt-3 flex justify-end">
