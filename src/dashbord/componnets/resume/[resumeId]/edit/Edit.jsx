@@ -36,98 +36,25 @@ const Edit = () => {
     }
   }
 
-  const handleDownloadPDF = async () => {
-    setIsExporting(true);
-    try {
-      // Add a small delay to ensure the DOM is fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
+  const handleDownloadPDF = () => {
+    window.print()
 
-      const resumeElement = resumeRef.current;
-
-      console.log("Resume element found:", resumeElement);
-
-      if (!resumeElement) {
-        console.error("Resume preview container not found in DOM");
-        toast.error("Resume preview not found!");
-        setIsExporting(false);
-        return;
-      }
-
-      // Show loading toast
-      toast.loading("Generating PDF...");
-
-      // Capture the resume as canvas with improved settings
-      const canvas = await html2canvas(resumeElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: true,
-        backgroundColor: "#ffffff",
-        windowWidth: resumeElement.scrollWidth,
-        windowHeight: resumeElement.scrollHeight,
-      });
-
-      console.log("Canvas created:", canvas.width, "x", canvas.height);
-
-      const imgData = canvas.toDataURL("image/png");
-
-      // Create PDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if content is longer than one page
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Download the PDF
-      const fileName = resumeInfo?.firstName
-        ? `${resumeInfo.firstName}_${resumeInfo.lastName}_Resume.pdf`
-        : "Resume.pdf";
-
-      pdf.save(fileName);
-
-      // Dismiss loading toast and show success
-      toast.dismiss();
-      toast.success("Resume downloaded successfully!");
-    } catch (error) {
-      console.error("Detailed error generating PDF:", error);
-      console.error("Error stack:", error.stack);
-      toast.dismiss();
-      toast.error(`Failed to generate PDF: ${error.message}`);
-    } finally {
-      setIsExporting(false);
-    }
   };
 
   return (
     <ResumeInfoContext.Provider value={{ resumeInfo, setResumeInfo }}>
-      <div className="min-h-screen pt-28 px-10 pb-10 grid grid-cols-1 md:grid-cols-2 gap-10 bg-secondary/30">
+      <div className="min-h-screen pt-28 px-10 pb-10 grid grid-cols-1 md:grid-cols-2 gap-10 bg-secondary/30 print-layout">
         {/* form Section */}
-        <FormSection />
+        <div className="no-print">
+          <FormSection />
+        </div>
 
         {/* Priview Section */}
-        <div className="relative">
+        <div className="relative print-container">
           <ResumePriview ref={resumeRef} />
 
           {/* Export PDF Button */}
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center no-print">
             <Button
               onClick={handleDownloadPDF}
               disabled={isExporting}
