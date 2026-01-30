@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env.local
+# Firebase config
+src/firebase/config.js
